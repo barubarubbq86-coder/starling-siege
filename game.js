@@ -1,4 +1,4 @@
-// Starling Siege: standalone offline game logic. All bundled enemy art came from the user.
+// Starling Siege: Pages edition. Enemy files are imported locally, never hosted.
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
@@ -119,7 +119,7 @@
   $('quickPlay').onclick=()=>startBattle(0);
 
   // Browser-owned imported drawings live in IndexedDB, not in the hosted files.
-  const art=new Map(), images=new Map();
+  const art=new Map(), images=new Map(), enemyFallbacks=new Map();
   let database=null;
   function openDatabase() {
     return new Promise((resolve,reject)=>{
@@ -140,6 +140,9 @@
       });
       for (const [key,blob] of entries) art.set(key,blobImage(blob));
       renderSquad();
+      renderStages();
+      renderRoster();
+      $('enemyImportStatus').textContent='この端末に保存済みの敵画像：'+enemies.filter(e=>art.has('enemy:'+e.id)).length+' / 20枚';
       const draft=art.get('paint:draft');
       if(draft){
         const restore=()=>paintContext.drawImage(draft,0,0,512,512);
@@ -166,6 +169,18 @@
       tx.onerror=()=>reject(tx.error);
     });
   }
+  function removeArt(key) {
+    if (!database) return Promise.reject(new Error('画像保存を利用できません'));
+    return new Promise((resolve,reject)=>{
+      const tx=database.transaction('art','readwrite');
+      tx.objectStore('art').delete(key);
+      tx.oncomplete=()=>{
+        const old=art.get(key);if(old?._localUrl)URL.revokeObjectURL(old._localUrl);
+        art.delete(key);resolve();
+      };
+      tx.onerror=()=>reject(tx.error);
+    });
+  }
   function getImage(source) {
     // Old saves contain locally uploaded data URLs; never treat an old URL as a network image.
     if (typeof source!=='string'||!/^data:image\/(?:png|jpeg|webp);base64,[a-z0-9+/=]+$/i.test(source))return null;
@@ -177,13 +192,53 @@
     if (saved) return saved;
     return i>=15?getImage(state.customChars[i-15]?.image||''):null;
   }
-  function enemyArt(i) {
-    const source='assets/enemies/'+enemies[i].file;
-    if (!images.has(source)) {const img=new Image();img.src=source;images.set(source,img);}
-    return images.get(source);
+  // Twenty deterministic, original creatures keep all stages playable before import.
+  function drawEnemyFallback(i) {
+    const e=enemies[i],c=document.createElement('canvas');c.width=c.height=160;
+    const g=c.getContext('2d');
+    const palette=['#ee8e8c','#f2bf6e','#8ed6b9','#abaddf','#dba4cf','#8fc4e8'];
+    const body=palette[(e.rank+i)%palette.length],boss=e.type==='B';
+    g.lineWidth=5;g.strokeStyle='#243951';g.lineJoin='round';
+    g.fillStyle='#304961';
+    for(let n=0;n<3;n++){
+      g.beginPath();g.ellipse(51+n*25,124,8,18,(n-1)*.35,0,7);g.fill();
+    }
+    if (i%3===0 || boss) {
+      g.fillStyle=boss?'#ffe398':'#83c9b4';
+      for(let n=0;n<(boss?5:3);n++){
+        const x=47+n*19;
+        g.beginPath();g.moveTo(x-10,70);g.lineTo(x-4,31-(n%2)*12);
+        g.lineTo(x+11,70);g.closePath();g.fill();g.stroke();
+      }
+    } else if (i%3===1) {
+      g.fillStyle=body;
+      for(const x of [51,105]){
+        g.beginPath();g.ellipse(x,56,13,27,(x===51?-.5:.5),0,7);g.fill();g.stroke();
+      }
+    }
+    g.fillStyle=body;
+    g.beginPath();
+    if(i%4===1){g.moveTo(41,65);g.lineTo(119,64);g.lineTo(126,126);g.lineTo(43,124);g.closePath();}
+    else if(i%4===2){g.moveTo(42,116);g.quadraticCurveTo(36,38,84,55);g.quadraticCurveTo(133,38,122,116);g.closePath();}
+    else {g.ellipse(82,95,43+(i%3)*3,39,0,0,7);}
+    g.fill();g.stroke();
+    g.fillStyle=boss?'#623e79':'#fff3dc';
+    g.beginPath();g.ellipse(57,83,12,14,0,0,7);g.fill();
+    g.fillStyle='#202c42';g.beginPath();g.arc(53,82,5,0,7);g.fill();
+    g.lineWidth=3;g.beginPath();g.moveTo(42,105);g.quadraticCurveTo(53,116,65,105);g.stroke();
+    g.fillStyle=boss?'#ffe593':'#324a61';g.font='bold 22px sans-serif';
+    g.textAlign='center';g.fillText(String(e.rank),96,111);
+    if(boss){g.strokeStyle='#ffe593';g.lineWidth=3;g.beginPath();
+      g.arc(83,92,51,-.8,1.1);g.stroke();}
+    const image=new Image();image.src=c.toDataURL('image/png');return image;
   }
-  enemies.forEach((_,i)=>enemyArt(i)); // Preload the 20 supplied sprites.
-  loadArt();
+  function enemyArt(i) {
+    const saved=art.get('enemy:'+enemies[i].id);
+    if(saved)return saved;
+    if(!enemyFallbacks.has(i))enemyFallbacks.set(i,drawEnemyFallback(i));
+    return enemyFallbacks.get(i);
+  }
+  const artReady=loadArt();
 
   function renderStages() {
     const wrap=$('stageCards');wrap.replaceChildren();
@@ -192,7 +247,7 @@
       const title=document.createElement('h3');title.textContent=(i+1)+'. '+stage.name;
       const desc=document.createElement('p');
       desc.textContent='難易度 ×'+Number(stage.diff).toFixed(2)+' / ボス '+enemyName(stage.boss);
-      const img=document.createElement('img');img.src='assets/enemies/'+enemies[stage.boss].file;img.alt='';
+      const img=document.createElement('img');img.src=enemyArt(stage.boss).src;img.alt='';
       const button=document.createElement('button');button.textContent=i>state.cleared?'未解放':'出撃';
       button.disabled=i>state.cleared;button.onclick=()=>startBattle(i);
       card.append(title,img,desc,button);wrap.append(card);
@@ -233,7 +288,7 @@
     const wrap=$('enemyRoster');wrap.replaceChildren();
     enemies.forEach((e,i)=>{
       const card=document.createElement('div');card.className='card';
-      const img=document.createElement('img');img.src='assets/enemies/'+e.file;img.alt=e.id+'の画像';
+      const img=document.createElement('img');img.src=enemyArt(i).src;img.alt=e.id+'の画像';
       const box=document.createElement('div'),label=document.createElement('label'),input=document.createElement('input');
       label.textContent=e.id+'（'+(e.type==='M'?'モブ':'ボス')+'）';
       input.value=enemyName(i);input.maxLength=24;input.setAttribute('aria-label',e.id+'の名前');
@@ -243,9 +298,71 @@
         else delete state.enemyNames[e.id];
         input.value=enemyName(i);save();renderStageBuilder();
       };
-      box.append(label,input);card.append(img,box);wrap.append(card);
+      const choose=document.createElement('button');choose.textContent='画像を設定';
+      const fileInput=document.createElement('input');fileInput.type='file';
+      fileInput.accept='image/png,image/jpeg,image/webp';fileInput.className='hide';
+      choose.onclick=()=>fileInput.click();
+      fileInput.onchange=async()=>{
+        const file=fileInput.files?.[0];if(!file)return;
+        try{
+          await artReady;await saveEnemyImage(file,i);
+          $('enemyImportStatus').textContent=e.id+'に画像を設定しました（この端末だけ）。';
+          renderRoster();renderStages();
+        }catch(error){$('enemyImportStatus').textContent=e.id+'：'+error.message;}
+      };
+      const clear=document.createElement('button');clear.textContent='仮キャラに戻す';
+      clear.disabled=!art.has('enemy:'+e.id);
+      clear.onclick=async()=>{
+        try{await artReady;await removeArt('enemy:'+e.id);
+          $('enemyImportStatus').textContent=e.id+'を仮キャラに戻しました。';
+          renderRoster();renderStages();
+        }catch(error){$('enemyImportStatus').textContent=e.id+'：'+error.message;}
+      };
+      box.append(label,input,choose,clear,fileInput);card.append(img,box);wrap.append(card);
     });
   }
+  // Decode and redraw user files: this strips metadata and limits stored image size.
+  function saveEnemyImage(file,i) {
+    if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>8*1024*1024)
+      return Promise.reject(new Error('PNG・JPEG・WebPの8MB以下を選んでください。'));
+    return new Promise((resolve,reject)=>{
+      const url=URL.createObjectURL(file),image=new Image();
+      image.onload=()=>{
+        URL.revokeObjectURL(url);
+        if(!image.naturalWidth||!image.naturalHeight||image.naturalWidth>4000||
+          image.naturalHeight>4000||image.naturalWidth*image.naturalHeight>16_000_000){
+          reject(new Error('画像は4000×4000以下にしてください。'));return;
+        }
+        try{
+          const canvas=document.createElement('canvas');
+          const scale=Math.min(1,512/Math.max(image.naturalWidth,image.naturalHeight));
+          canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));
+          canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
+          canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);
+          canvas.toBlob(blob=>{
+            if(!blob){reject(new Error('画像を変換できませんでした。'));return;}
+            putArt('enemy:'+enemies[i].id,blob).then(resolve,reject);
+          },'image/png');
+        }catch(error){reject(error);}
+      };
+      image.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('画像を読み込めませんでした。'));};
+      image.src=url;
+    });
+  }
+  $('enemyBatchUpload').onchange=async event=>{
+    const files=[...(event.target.files||[])];event.target.value='';
+    await artReady;
+    let done=0;const skipped=[];
+    for(const file of files){
+      const match=/^([mb])[-_ ]?0*(\d+)\.(png|jpe?g|webp)$/i.exec(file.name);
+      const index=match?enemies.findIndex(e=>e.type===match[1].toUpperCase()&&e.rank===Number(match[2])):-1;
+      if(index<0){skipped.push(file.name+'（名前不一致）');continue;}
+      try{await saveEnemyImage(file,index);done++;}
+      catch(error){skipped.push(file.name+'（'+error.message+'）');}
+    }
+    renderRoster();renderStages();
+    $('enemyImportStatus').textContent=done+'枚を保存しました。'+(skipped.length?' 対象外：'+skipped.join('、'):'');
+  };
   function pull(premium) {
     const cost=premium?100:30;if(state.cans<cost){$('gachaLog').textContent='星缶が足りません';return;}
     state.cans-=cost;
@@ -821,4 +938,9 @@
     else if(e.code==='ArrowRight'||e.code==='KeyD')camera=Math.min(WORLD-VIEW,camera+120);
   });
   wallet();renderStages();renderSquad();renderRoster();refreshAllyTargets();
+  // The first online visit caches only our own game code for later offline visits.
+  if(typeof navigator!=='undefined'&&'serviceWorker' in navigator&&
+      typeof location!=='undefined'&&location.protocol==='https:'){
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+  }
 })();

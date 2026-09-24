@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0b1729">
   <meta name="referrer" content="no-referrer">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'none'; font-src 'none'; media-src 'none'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'; base-uri 'none'; form-action 'none'">
-  <title>スターリング・シージ（オフライン）</title>
-  <meta name="description" content="手描きの仲間と20体の敵で遊ぶ、オリジナル横スクロール防衛ゲーム。">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self'; font-src 'none'; media-src 'none'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>スターリング・シージ</title>
+  <meta name="description" content="手描きの仲間とオリジナルの敵で遊ぶ、横スクロール防衛ゲーム。">
   <style>
     :root{--ink:#f6f3df;--muted:#b7c7d8;--line:#395a7d;--mint:#79e5bd;--gold:#ffd477;--panel:#142741}
     *{box-sizing:border-box}html{font-size:16px}body{margin:0;min-height:100vh;background:#091423;color:var(--ink);font-family:system-ui,"Noto Sans JP",sans-serif}
@@ -25,7 +25,7 @@
     .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}.card{background:#1a2d48;border:1px solid #3c5d7d;border-radius:14px;padding:12px}.card h3{margin:.2rem 0}.card p{color:var(--muted);font-size:.92rem;line-height:1.45}.card button{margin-top:7px}.card img{width:80px;height:70px;object-fit:contain;display:block}.stagecard{display:flex;flex-direction:column}.stagecard button{margin-top:auto}
     .builder{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.control{background:#13243c;border:1px solid #355675;border-radius:13px;padding:12px}.control label{display:block;color:var(--muted);margin-bottom:8px}.stepper{display:grid;grid-template-columns:48px 1fr 48px;gap:7px;align-items:center}.stepper span{text-align:center;font-weight:800}
     .preview{min-height:240px;background:radial-gradient(circle,#2c536c,#0e192a 70%);display:grid;place-items:center;border-radius:15px;overflow:hidden}.preview canvas{width:min(100%,260px);height:auto;aspect-ratio:1;image-rendering:auto}.custom-creature{width:120px;height:120px;border-radius:50%;position:relative;box-shadow:0 12px 19px #0006}.custom-creature.square{border-radius:20px}.custom-creature.tall{width:86px;height:145px}.custom-creature.wide{width:160px;height:93px}.custom-creature:before,.custom-creature:after{content:"";position:absolute;top:35%;width:20px;height:24px;border-radius:50%;background:#1e2939}.custom-creature:before{left:25%}.custom-creature:after{right:25%}.custom-creature.ears{clip-path:polygon(0 10%,15% 0,33% 11%,67% 11%,85% 0,100% 10%,100% 100%,0 100%)}.mark{position:absolute;inset:auto 0 8%;text-align:center;font-size:2rem;color:#304159}
-    .log{min-height:35px;color:var(--gold);font-weight:800}.hide{display:none!important}.enemy-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;max-height:260px;overflow:auto}.enemy-grid button{font-size:.85rem;padding:.42rem;min-height:48px}.roster{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:10px}.roster .card{display:flex;gap:10px;align-items:center}.roster img{width:66px;height:70px}.roster label{display:block;font-size:.85rem;color:var(--muted)}.roster input{width:100%;margin-top:4px}
+    .log{min-height:35px;color:var(--gold);font-weight:800}.hide{display:none!important}.enemy-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;max-height:260px;overflow:auto}.enemy-grid button{font-size:.85rem;padding:.42rem;min-height:48px}.roster{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}.roster .card{display:flex;gap:10px;align-items:center}.roster .card>div{min-width:0;flex:1}.roster img{width:66px;height:70px;object-fit:contain}.roster label{display:block;font-size:.85rem;color:var(--muted)}.roster input{width:100%;margin-top:4px}.roster button{padding:.4rem;font-size:.8rem;margin:5px 4px 0 0}
     .import-panel{margin-top:16px;border:1px solid #477192;border-radius:15px;padding:17px;background:#102239}.import-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.import-controls label{display:block;margin-bottom:4px;color:var(--muted)}.credits{margin-top:22px;color:var(--muted);font-size:.85rem}
     .paint-shell{display:grid;grid-template-columns:90px minmax(0,1fr);gap:12px}.paint-tools{display:flex;flex-direction:column;gap:9px}.paint-tools button{min-height:62px}.paint-main{min-width:0}.paint-top,.paint-bottom{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:0 0 10px}.paint-bottom{margin:10px 0 0}.paint-frame{display:grid;place-items:center;min-height:300px;padding:12px;border-radius:16px;background:#213c58}.paint-surface{width:min(100%,560px);aspect-ratio:1;display:block;touch-action:none;border:2px solid #7f9cb0;border-radius:3px;box-shadow:0 10px 28px #0007;background-color:#fff;background-image:linear-gradient(45deg,#d7dce0 25%,transparent 25%),linear-gradient(-45deg,#d7dce0 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#d7dce0 75%),linear-gradient(-45deg,transparent 75%,#d7dce0 75%);background-size:22px 22px;background-position:0 0,0 11px,11px -11px,-11px 0}
     .paint-swatch{width:42px;height:42px;border-radius:50%;padding:0;border:3px solid #bed5de}.paint-swatch.active{outline:3px solid var(--gold)}.paint-top label,.paint-bottom label{color:var(--muted)}.paint-top input[type=range]{width:140px}.paint-bottom select{min-width:150px}
@@ -37,11 +37,11 @@
 <body><main id="app">
   <header class="top"><div class="brand">STARLING SIEGE</div><div class="wallet"><span id="xp">XP 0</span><br><span id="cans">★ 150</span></div></header>
   <nav class="nav" id="nav">
-    <button data-page="home">ホーム</button><button data-page="stages">ステージ</button><button data-page="squad">編成・育成</button><button data-page="gacha">ガチャ</button><button data-page="workshop">組み合わせ工房</button><button data-page="paint">ペイント</button><button data-page="roster">敵キャラ名</button>
+    <button data-page="home">ホーム</button><button data-page="stages">ステージ</button><button data-page="squad">編成・育成</button><button data-page="gacha">ガチャ</button><button data-page="workshop">組み合わせ工房</button><button data-page="paint">ペイント</button><button data-page="roster">敵キャラ</button>
   </nav>
   <section id="home" class="screen show"><div class="home-grid"><div class="panel hero">
-    <div class="hint">オフライン横スクロール防衛ゲーム・絵はこの端末に保存</div><h1>星の砦を<br>守りきれ。</h1>
-    <p>手描きの仲間を出撃させ、20体の敵に挑もう。敵には好きな名前を付けられます。</p>
+    <div class="hint">ブラウザで遊べる横スクロール防衛ゲーム・絵はこの端末に保存</div><h1>星の砦を<br>守りきれ。</h1>
+    <p>手描きの仲間を出撃させ、20体の敵に挑もう。敵には好きな名前や画像を付けられます。</p>
     <button class="primary bigplay" id="quickPlay">今すぐテストプレイ</button><div id="homeLog" class="log"></div>
   </div><div class="panel mascot"><div class="orb"><i class="mouth"></i></div></div></div></section>
   <section id="battle" class="screen"><div class="panel">
@@ -63,7 +63,7 @@
       <button class="primary" id="applyArt" disabled>プレビューの画像を適用</button><p id="importStatus" class="log" role="status"></p>
     </div>
     <button id="openPaint" class="primary" style="margin-top:14px">アプリ内でキャラを描く</button>
-    <p class="credits">敵の画像：ユーザー提供。アプリ内に外部サイトへのリンクはありません。</p>
+    <p class="credits">ゲームに表示する仮キャラはオリジナルです。取り込んだ絵や敵画像は、この端末のブラウザだけに保存します。</p>
   </div></section>
   <section id="paint" class="screen"><div class="panel">
     <h2>キャラを描く</h2><p class="hint">ペンで描いて、保存したらすぐ戦闘に使えます。背景は透明です。</p>
@@ -77,5 +77,11 @@
       </div>
     </div>
   </div></section>
-  <section id="roster" class="screen"><div class="panel"><h2>敵キャラの名前</h2><p class="hint">M＝モブ、B＝ボス。数字が大きいほどHP・攻撃力が高くなります。名前はこのブラウザに保存されます。</p><div id="enemyRoster" class="roster"></div></div></section>
+  <section id="roster" class="screen"><div class="panel"><h2>敵キャラの名前・画像</h2><p class="hint">M＝モブ、B＝ボス。数字が大きいほどHP・攻撃力が高くなります。画像がなくても仮キャラで遊べます。</p>
+    <div class="import-panel"><label for="enemyBatchUpload">敵画像をまとめて読み込む（PNG・JPEG・WebP、1枚8MB以下）</label>
+      <input id="enemyBatchUpload" type="file" accept="image/png,image/jpeg,image/webp" multiple>
+      <p class="hint">ファイル名の数字で自動配置します。例：M-01.png、M-14.png、B-1.png、B-20.png。対応しない名前は下の各キャラから個別に設定できます。画像はGitHubへ送られません。</p>
+      <p id="enemyImportStatus" class="log" role="status"></p>
+    </div><div id="enemyRoster" class="roster" style="margin-top:16px"></div>
+  </div></section>
 </main></body></html>
